@@ -1,0 +1,112 @@
+#include <openssl/evp.h>
+#include <openssl/ec.h>
+#include <openssl/pem.h>
+#include <openssl/err.h>
+#include <chrono>
+#include <cstring>
+#include <iostream>
+#include <vector>
+
+using namespace std;
+using namespace std::chrono;
+
+static double ms_diff(high_resolution_clock::time_point a, high_resolution_clock::time_point b) {
+    return duration<double, milli>(b - a).count();
+}
+
+static int der_pub_bytes(EVP_PKEY *pkey) {
+    unsigned char *buf = nullptr;
+    int len = i2d_PUBKEY(pkey, &buf);
+    OPENSSL_free(buf);
+    return len;
+}
+
+static int der_priv_bytes(EVP_PKEY *pkey) {
+    unsigned char *buf = nullptr;
+    int len = i2d_PrivateKey(pkey, &buf);
+    OPENSSL_free(buf);
+    return len;
+}
+
+int main(int argc, char **argv) {
+    const string mode = (argc > 1) ? argv[1] : "bench";
+    const string msg = (argc > 2) ? argv[2] : "BARC_PQC_2026";
+    const int iters = (argc > 3) ? atoi(argv[3]) : 100;
+
+    OpenSSL_add_all_algorithms();
+    ERR_load_crypto_strings();
+
+    EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, nullptr);
+    if (!pctx) return 1;
+    EVP_PKEY *pkey = nullptr;
+
+    auto t1 = high_resolution_clock::now();
+    if (EVP_PKEY_keygen_init(pctx) <= 0) return 1;
+    if (EVP_PKEY_CTX_set_ec_paramgen_curve_nid(pctx, NID_X9_62_prime256v1) <= 0) return 1;
+    if (EVP_PKEY_keygen(pctx, &pkey) <= 0) return 1;
+    auto t2 = high_resolution_clock::now();
+    double keygen_ms = ms_diff(t1, t2);
+
+    vector<unsigned char> sig(EVP_PKEY_size(pkey));
+    size_t siglen = 0;
+
+    double sign_total = 0.0, verify_total = 0.0;
+
+    for (int i = 0; i < iters; i++) {
+        EVP_MD_CTX *sctx = EVP_MD_CTX_new();
+        auto s1 = high_resolution_clock::now();
+        EVP_DigestSignInit(sctx, nullptr, EVP_sha256(), nullptr, pkey);
+        EVP_DigestSign(sctx, nullptr, &siglen,
+                       reinterpret_cast<const unsigned char*>(msg.data()), msg.size());
+        sig.resize(siglen);
+        EVP_DigestSign(sctx, sig.data(), &siglen,
+                       reinterpret_cast<const unsigned char*>(msg.data()), msg.size());
+        auto s2 = high_resolution_clock::now();
+        sign_total += ms_diff(s1, s2);
+        EVP_MD_CTX_free(sctx);
+    }
+
+    int verify_ok = 0;
+    for (int i = 0; i < iters; i++) {
+        EVP_MD_CTX *vctx = EVP_MD_CTX_new();
+        auto v1 = high_resolution_clock::now();
+        EVP_DigestVerifyInit(vctx, nullptr, EVP_sha256(), nullptr, pkey);
+        verify_ok = EVP_DigestVerify(vctx, sig.data(), siglen,
+                                     reinterpret_cast<const unsigned char*>(msg.data()), msg.size());
+        auto v2 = high_resolution_clock::now();
+        verify_total += ms_diff(v1, v2);
+        EVP_MD_CTX_free(vctx);
+    }
+
+    int tamper_ok = verify_ok;
+    if (mode == "tamper" && !sig.empty()) {
+        sig[0] ^= 0x01;
+        EVP_MD_CTX *vctx = EVP_MD_CTX_new();
+        EVP_DigestVerifyInit(vctx, nullptr, EVP_sha256(), nullptr, pkey);
+        tamper_ok = EVP_DigestVerify(vctx, sig.data(), siglen,
+                                     reinterpret_cast<const unsigned char*>(msg.data()), msg.size());
+        EVP_MD_CTX_free(vctx);
+    }
+
+    cout << "algorithm=ECDSA-P256\n";
+    cout << "mode=" << mode << "\n";
+    cout << "iterations=" << iters << "\n";
+    cout << "message=" << msg << "\n";
+    cout << "keygen_ms=" << keygen_ms << "\n";
+    cout << "sign_ms=" << (sign_total / iters) << "\n";
+    cout << "verify_ms=" << (verify_total / iters) << "\n";
+    cout << "pk_bytes=" << der_pub_bytes(pkey) << "\n";
+    cout << "sk_bytes=" << der_priv_bytes(pkey) << "\n";
+    cout << "sig_bytes=" << siglen << "\n";
+    cout << "verify_result=" << (verify_ok == 1 ? "VALID" : "INVALID") << "\n";
+    if (mode == "tamper") {
+        cout << "tamper_verify_result=" << (tamper_ok == 1 ? "VALID" : "INVALID") << "\n";
+    }
+
+    EVP_PKEY_free(pkey);
+    EVP_PKEY_CTX_free(pctx);
+    EVP_cleanup();
+    CRYPTO_cleanup_all_ex_data();
+    ERR_free_strings();
+    return 0;
+}
