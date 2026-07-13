@@ -1,0 +1,11 @@
+algorithm=TOY-KEM
+mode=bench
+iterations=1000
+shared_bit=1
+keygen_ms=4.2e-05
+encaps_ms=1.1376e-05
+decaps_ms=1.1459e-05
+pk_bytes=8
+sk_bytes=4
+ct_bytes=8
+shared_secret_match=YES

@@ -1,0 +1,11 @@
+algorithm=TOY-RSA
+mode=bench
+iterations=1000
+message_int=146
+keygen_ms=4.1e-05
+sign_ms=1.1416e-05
+verify_ms=1.146e-05
+pk_bytes=16
+sk_bytes=16
+sig_bytes=8
+verify_result=VALID

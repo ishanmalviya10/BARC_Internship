@@ -1,0 +1,12 @@
+algorithm=ML-DSA-65
+mode=tamper
+iterations=100
+message=BARC_PQC_2026
+keygen_ms=0.936
+sign_ms=0.129157
+verify_ms=0.0476479
+pk_bytes=1952
+sk_bytes=4032
+sig_bytes=3309
+verify_result=VALID
+tamper_verify_result=INVALID

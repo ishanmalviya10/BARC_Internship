@@ -1,0 +1,11 @@
+algorithm=RSA-2048
+mode=bench
+iterations=100
+message=BARC_PQC_2026
+keygen_ms=24.7037
+sign_ms=0.394324
+verify_ms=0.0096342
+pk_bytes=294
+sk_bytes=1190
+sig_bytes=256
+verify_result=VALID

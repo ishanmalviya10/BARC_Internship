@@ -1,0 +1,18 @@
+algorithm=TOY-ECDSA
+mode=bench
+iterations=1000
+message=BARC_PQC_2026
+curve=y^2=x^3+2x+2 mod 17
+generator=(5,1)
+order=19
+private_key=7
+public_key=(0,6)
+signature_r=7
+signature_s=17
+keygen_ms=0.000542
+sign_ms=6.25e-07
+verify_ms=1.125e-06
+pk_bytes=8
+sk_bytes=4
+sig_bytes=8
+verify_result=VALID

@@ -1,0 +1,13 @@
+algorithm=TOY-ECDSA
+mode=tamper
+message=BARC_PQC_2026
+curve=y^2=x^3+2x+2 mod 17
+generator=(5,1)
+order=19
+private_key=7
+public_key=(0,6)
+signature_r=7
+signature_s=17
+tampered_signature_s=18
+verify_result_original=VALID
+verify_result_tampered=INVALID

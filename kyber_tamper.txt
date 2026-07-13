@@ -1,0 +1,12 @@
+algorithm=ML-KEM-768
+mode=tamper
+iterations=100
+keygen_ms=1.42979
+encaps_ms=0.0209592
+decaps_ms=0.0226996
+pk_bytes=1184
+sk_bytes=2400
+ct_bytes=1088
+ss_bytes=32
+shared_secret_match=YES
+tamper_shared_secret_match=NO

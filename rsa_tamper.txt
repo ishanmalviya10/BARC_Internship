@@ -1,0 +1,12 @@
+algorithm=RSA-2048
+mode=tamper
+iterations=100
+message=BARC_PQC_2026
+keygen_ms=35.6711
+sign_ms=0.308164
+verify_ms=0.0083929
+pk_bytes=294
+sk_bytes=1190
+sig_bytes=256
+verify_result=VALID
+tamper_verify_result=INVALID

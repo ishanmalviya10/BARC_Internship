@@ -1,0 +1,14 @@
+algorithm=TOY-DILITHIUM
+mode=tamper
+message=BARC_PQC_2026
+ring=Z_17[x]/(x^4+1)
+a=[3,5,0,1]
+s1=[1,0,1,1]
+t=[15,4,2,9]
+y=[2,1,0,1]
+w=[0,13,4,5]
+challenge_c=1
+z=[3,1,1,2]
+tampered_z=[4,1,1,2]
+verify_result_original=VALID
+verify_result_tampered=INVALID
