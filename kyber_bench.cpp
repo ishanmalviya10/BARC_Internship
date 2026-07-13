@@ -1,5 +1,6 @@
 #include <oqs/oqs.h>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <vector>
@@ -7,7 +8,8 @@
 using namespace std;
 using namespace std::chrono;
 
-static double ms_diff(high_resolution_clock::time_point a, high_resolution_clock::time_point b) {
+static double ms_diff(high_resolution_clock::time_point a,
+                      high_resolution_clock::time_point b) {
     return duration<double, milli>(b - a).count();
 }
 
@@ -16,7 +18,10 @@ int main(int argc, char **argv) {
     const int iters = (argc > 2) ? atoi(argv[2]) : 100;
 
     OQS_KEM *kem = OQS_KEM_new(OQS_KEM_alg_ml_kem_768);
-    if (!kem) return 1;
+    if (!kem) {
+        cerr << "Failed to initialize ML-KEM-768\n";
+        return 1;
+    }
 
     vector<uint8_t> pk(kem->length_public_key);
     vector<uint8_t> sk(kem->length_secret_key);
@@ -25,34 +30,60 @@ int main(int argc, char **argv) {
     vector<uint8_t> ss_dec(kem->length_shared_secret);
 
     auto k1 = high_resolution_clock::now();
-    if (OQS_KEM_keypair(kem, pk.data(), sk.data()) != OQS_SUCCESS) return 1;
+    if (OQS_KEM_keypair(kem, pk.data(), sk.data()) != OQS_SUCCESS) {
+        cerr << "Keypair generation failed\n";
+        OQS_KEM_free(kem);
+        return 1;
+    }
     auto k2 = high_resolution_clock::now();
     double keygen_ms = ms_diff(k1, k2);
 
-    double encaps_total = 0.0, decaps_total = 0.0;
-
-    for (int i = 0; i < iters; i++) {
+    double encaps_total = 0.0;
+    for (int i = 0; i < iters; ++i) {
         auto e1 = high_resolution_clock::now();
-        if (OQS_KEM_encaps(kem, ct.data(), ss_enc.data(), pk.data()) != OQS_SUCCESS) return 1;
+        if (OQS_KEM_encaps(kem, ct.data(), ss_enc.data(), pk.data()) != OQS_SUCCESS) {
+            cerr << "Encapsulation failed\n";
+            OQS_KEM_free(kem);
+            return 1;
+        }
         auto e2 = high_resolution_clock::now();
         encaps_total += ms_diff(e1, e2);
     }
 
     int match = 0;
-    for (int i = 0; i < iters; i++) {
-        OQS_KEM_encaps(kem, ct.data(), ss_enc.data(), pk.data());
+    double decaps_total = 0.0;
+    for (int i = 0; i < iters; ++i) {
+        if (OQS_KEM_encaps(kem, ct.data(), ss_enc.data(), pk.data()) != OQS_SUCCESS) {
+            cerr << "Encapsulation failed\n";
+            OQS_KEM_free(kem);
+            return 1;
+        }
+
         auto d1 = high_resolution_clock::now();
-        if (OQS_KEM_decaps(kem, ss_dec.data(), ct.data(), sk.data()) != OQS_SUCCESS) return 1;
+        if (OQS_KEM_decaps(kem, ss_dec.data(), ct.data(), sk.data()) != OQS_SUCCESS) {
+            cerr << "Decapsulation failed\n";
+            OQS_KEM_free(kem);
+            return 1;
+        }
         auto d2 = high_resolution_clock::now();
         decaps_total += ms_diff(d1, d2);
+
         match = (memcmp(ss_enc.data(), ss_dec.data(), kem->length_shared_secret) == 0);
     }
 
     int tamper_match = match;
     if (mode == "tamper" && !ct.empty()) {
-        OQS_KEM_encaps(kem, ct.data(), ss_enc.data(), pk.data());
+        if (OQS_KEM_encaps(kem, ct.data(), ss_enc.data(), pk.data()) != OQS_SUCCESS) {
+            cerr << "Encapsulation failed\n";
+            OQS_KEM_free(kem);
+            return 1;
+        }
         ct[0] ^= 0x01;
-        OQS_KEM_decaps(kem, ss_dec.data(), ct.data(), sk.data());
+        if (OQS_KEM_decaps(kem, ss_dec.data(), ct.data(), sk.data()) != OQS_SUCCESS) {
+            cerr << "Decapsulation failed\n";
+            OQS_KEM_free(kem);
+            return 1;
+        }
         tamper_match = (memcmp(ss_enc.data(), ss_dec.data(), kem->length_shared_secret) == 0);
     }
 
