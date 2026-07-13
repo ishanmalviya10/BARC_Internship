@@ -1,0 +1,11 @@
+algorithm=ML-KEM-768
+mode=bench
+iterations=100
+keygen_ms=1.41738
+encaps_ms=0.0109871
+decaps_ms=0.0118858
+pk_bytes=1184
+sk_bytes=2400
+ct_bytes=1088
+ss_bytes=32
+shared_secret_match=YES

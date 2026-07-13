@@ -1,0 +1,11 @@
+algorithm=ECDSA-P256
+mode=bench
+iterations=100
+message=BARC_PQC_2026
+keygen_ms=0.991875
+sign_ms=0.0120246
+verify_ms=0.0295279
+pk_bytes=91
+sk_bytes=121
+sig_bytes=71
+verify_result=VALID
